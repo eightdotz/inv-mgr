@@ -49,6 +49,134 @@ def main(stdscr):
         if not inps():
             exit()
 
+def search():
+    global current_menu
+    while True:
+        screens["main"].clear()
+        screens["main"].refresh()
+        results = os.listdir(item_directory)
+        print_text("(q to quit) Search:", screens["top"], 0)
+        query = type().lower()
+        if query == "q":
+            return
+        current_menu = []
+        while True:
+            current_menu = []
+            if query:
+                for item in results:
+                    if query in item.lower():
+                        current_menu.append(item)
+            else:
+                current_menu = results
+            print_text(f"Search: {query}", screens["top"], 0)
+            if not current_menu:
+                print_text("No results!", screens["main"], 1)
+                wait()
+                break
+            print_list()
+            name = inps()
+            if not name:
+                break
+            while True:
+                current_menu = ["Sell", "Restock", "Edit", "Delete"]
+                print_list()
+                choice = quick_inps()
+                if not choice:
+                    break
+                new_func = menu_links.get(current_menu[pos])
+                if new_func:
+                    new_func(name)
+                    print_list()
+        
+
+def quick_sell(filename):
+    print_text("Sell item", screens["top"], 0)
+    with open(item_directory + "/" + filename, "r") as file:
+        name = file.read()
+        name, desc, quantity, price = name.split("|")
+    try:
+        quantity = int(quantity)
+    except Exception:
+        print_text("Quantity is not a float or int and cannot be convered for adjustment. Please correct this in Inventory.", screens["main"], 1)
+        wait()
+    old_quantity = quantity
+    quantity -= 1
+    with open(item_directory + "/" + filename, "w") as file:
+        file.write(f"{name}|{desc}|{quantity}|{price}")
+    with open(history_file, "a") as file:
+        file.write(f"{name}:{price}\n")
+    print_text(f"Stock as changed from {old_quantity} > {quantity}\nPress to cont.", screens["main"], 1)
+    wait()
+
+def quick_stock(filename):
+    print_text("Restock item", screens["top"], 0)
+    with open(item_directory + "/" + filename, "r") as file:
+        name = file.read()
+        name, desc, quantity, price = name.split("|")
+    try:
+        quantity = int(quantity)
+    except Exception:
+        print_text("Quantity is not a int and cannot be convered for adjustment. Please correct this in Inventory.", screens["main"], 1)
+        wait()
+        return
+    old_quantity = quantity
+    print_text("Enter how much of this item will be added", screens["main"], 1)
+    try:
+        quantity += int(type())
+    except Exception:
+        print_text("Entered value is not an int, no values will be changed", screens["main"], 1)
+        return
+
+    quantity = str(quantity)
+
+    print_text(f"Stock as changed from {old_quantity} > {quantity}\nPress to cont.", screens["main"], 1)
+    wait()
+    with open(item_directory + "/" + filename, "w") as file:
+        file.write(f"{name}|{desc}|{quantity}|{price}")
+
+def quick_edit(filename):
+    global current_menu
+    print_text("Edit item", screens["top"], 0)
+    with open(item_directory + "/" + filename, "r") as file:
+        name = file.read()
+        name, desc, quantity, price = name.split("|")
+    while True:
+        current_menu = [f"Name: {name}", f"Description: (select to view description)", f"Quantity: {quantity}", f"Price: {price}"]
+        print_list()
+        update_choice = inps()
+        if not update_choice:
+            if filename in os.listdir(item_directory):
+                os.remove(item_directory + "/" + filename)
+            elif name in os.listdir(item_directory):
+                os.remove(item_directory + "/" + filename)
+            with open(item_directory + "/" + name, "w") as file:
+                file.write(f"{name}|{desc}|{quantity}|{price}")
+            break
+        if "Name:" in update_choice:
+            print_text(name, screens["main"], 1)
+            name = type(name)
+        elif "Description:" in update_choice:
+            print_text(desc, screens["main"], 1)
+            desc = type(desc)
+        elif "Quantity:" in update_choice:
+            print_text(quantity, screens["main"], 1)
+            quantity = type(quantity)
+        elif "Price:" in update_choice:
+            print_text(price, screens["main"], 1)
+            price = type(price)
+
+def quick_delete(filename):
+    print_text("Delete an item.", screens["top"], 0)
+    print_text("Type 'yes' to confirm deletion.", screens["main"], 1)
+    conf = type().lower()
+    if conf == "yes":
+        os.remove(item_directory + "/" + filename)
+    else:
+        return
+    print_text("Item removed!", screens["main"], 1)
+    time.sleep(0.1)
+    wait()
+
 def manage_inv():
     global current_menu
     while True:
@@ -73,7 +201,7 @@ def selling_history():
     with open(history_file, "r") as file:
         data = file.readlines()
         if not data:
-            print_text(f"No items have been sold, there is nothing to display. Enter to cont.\nFile data:\n\n{check}\n{data}", screens["main"], 1)
+            print_text(f"No items have been sold, there is nothing to display. Enter to cont.\nFile data:\n\n{data}", screens["main"], 1)
             wait()
             return
 
@@ -82,11 +210,12 @@ def selling_history():
         name = name.strip()
         price = price.strip()
         if name not in item_data.keys():
-            item_data[name] = int(price)
+            item_data[name] = {"price": int(price), "sold": 1}
         else:
-            item_data[name] += int(price)
+            item_data[name]["price"] += int(price)
+            item_data[name]["sold"] += 1
     for name, price in item_data.items():
-        formatted_items.append(f"{name} = ${price}")
+        formatted_items.append(f"Sold {item_data[name]["sold"]} {name} = ${item_data[name]["price"]}")
     print_list(formatted_items)
     wait()
 
@@ -145,16 +274,16 @@ def edit_item():
                 break
             if "Name:" in update_choice:
                 print_text(name, screens["main"], 1)
-                name = type()
+                name = type(name)
             elif "Description:" in update_choice:
                 print_text(desc, screens["main"], 1)
-                desc = type()
+                desc = type(desc)
             elif "Quantity:" in update_choice:
                 print_text(quantity, screens["main"], 1)
-                quantity = type()
+                quantity = type(quantity)
             elif "Price:" in update_choice:
                 print_text(price, screens["main"], 1)
-                price = type()
+                price = type(price)
 
 def delete_item():
     global current_menu
@@ -266,7 +395,10 @@ def wait():
     screens["main"].getch()
 
 
-def type():
+def type(prefill=""):
+    if prefill:
+        screens["box"].addstr(0, 0, prefill)
+        screens["box"].move(0, len(prefill))
     inp = screens["text"].edit().strip()
     screens["box"].clear()
     screens["box"].refresh()
@@ -306,9 +438,24 @@ def inps():
         elif key == ord("q"):
             pos = 0
             return 0
-            #print_list()
         elif key == ord('\x1b'):
             exit()
+
+def quick_inps():
+    global pos
+    pos = 0
+    while True:
+        key = screens["main"].getch()
+        if key == ord("w") or key == ord("s"):
+            pos = select(key, pos)
+        elif key == ord("e"):
+            return current_menu[pos]
+        elif key == ord("q"):
+            pos = 0
+            return 0
+        elif key == ord('\x1b'):
+            exit()
+
 
 def select(key, pos):
     if not current_menu:
@@ -348,13 +495,13 @@ def run_setup():
         with open(history_file, "r") as file:
             pass
     
-menu_links = {"Perform Transaction": transaction, "Manage Inventory": manage_inv, "View Stats": view_stats, "Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history}
+menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv, "View Stats": view_stats, "Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete}
 menus = []
 j = 0
 for i in menu_links.keys():
     menus.append(i)
     j += 1
-    if j == 3:
+    if j == 4:
         break
 current_menu = menus
 run_setup()
