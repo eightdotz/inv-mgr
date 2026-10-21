@@ -59,7 +59,38 @@ def manage_inv():
             return
 
 def view_stats():
-    return
+    global current_menu
+    while True:
+        print_text("Statistics Viewer", screens["top"], 0)
+        current_menu = ["View Selling History"]
+        print_list()
+        if not inps():
+            return
+
+def selling_history():
+    item_data = {}
+    formatted_items = []
+    with open(history_file, "r") as file:
+        data = file.readlines()
+        if not data:
+            print_text(f"No items have been sold, there is nothing to display. Enter to cont.\nFile data:\n\n{check}\n{data}", screens["main"], 1)
+            wait()
+            return
+
+    for item in data:
+        name, price = item.split(":")
+        name = name.strip()
+        price = price.strip()
+        if name not in item_data.keys():
+            item_data[name] = int(price)
+        else:
+            item_data[name] += int(price)
+    for name, price in item_data.items():
+        formatted_items.append(f"{name} = ${price}")
+    print_list(formatted_items)
+    wait()
+
+
 
 def add_item():
     print_text("Add a new item!", screens["top"], 0)
@@ -89,7 +120,41 @@ def add_item():
         file.write(f"{name}|{description}|{quantity}|{price}")
 
 def edit_item():
-    return
+    global current_menu
+    print_text("Edit item", screens["top"], 0)
+    while True:
+        current_menu = os.listdir(item_directory)
+        print_list()
+        choice = inps()
+        if not choice:
+            return
+        with open(item_directory + "/" + choice, "r") as file:
+            name = file.read()
+            name, desc, quantity, price = name.split("|")
+        while True:
+            current_menu = [f"Name: {name}", f"Description: (select to view description)", f"Quantity: {quantity}", f"Price: {price}"]
+            print_list()
+            update_choice = inps()
+            if not update_choice:
+                if choice in os.listdir(item_directory):
+                    os.remove(item_directory + "/" + choice)
+                elif name in os.listdir(item_directory):
+                    os.remove(item_directory + "/" + choice)
+                with open(item_directory + "/" + name, "w") as file:
+                    file.write(f"{name}|{desc}|{quantity}|{price}")
+                break
+            if "Name:" in update_choice:
+                print_text(name, screens["main"], 1)
+                name = type()
+            elif "Description:" in update_choice:
+                print_text(desc, screens["main"], 1)
+                desc = type()
+            elif "Quantity:" in update_choice:
+                print_text(quantity, screens["main"], 1)
+                quantity = type()
+            elif "Price:" in update_choice:
+                print_text(price, screens["main"], 1)
+                price = type()
 
 def delete_item():
     global current_menu
@@ -125,6 +190,78 @@ def view_items():
         print_text(f"{name}:\n{desc}\n\nIn Stock: {quantity}\nListed Price: ${price}\n\nEnter to cont.", screens["main"], 1)
         wait()
 
+def transaction():
+    global current_menu
+    while True:
+        print_text("Complete Transaction", screens["top"], 0)
+        current_menu = ["Sell Item", "Restock Quantity"]
+        print_list()
+        if not inps():
+            return
+
+def sell_item():
+    global current_menu
+    print_text("Sell item", screens["top"], 0)
+    while True:
+        current_menu = os.listdir(item_directory)
+        print_list()
+        choice = inps()
+        if not choice:
+            return
+        with open(item_directory + "/" + choice, "r") as file:
+            name = file.read()
+            name, desc, quantity, price = name.split("|")
+        try:
+            quantity = int(quantity)
+        except Exception:
+            print_text("Quantity is not a float or int and cannot be convered for adjustment. Please correct this in Inventory.", screens["main"], 1)
+            wait()
+            return
+        old_quantity = quantity
+        quantity -= 1
+        
+        with open(item_directory + "/" + choice, "w") as file:
+            file.write(f"{name}|{desc}|{quantity}|{price}")        
+        with open(history_file, "a") as file:
+            file.write(f"{name}:{price}\n")
+        
+        print_text(f"Stock as changed from {old_quantity} > {quantity}\nPress to cont.", screens["main"], 1)
+        wait()
+
+def update_item():
+    global current_menu
+    print_text("Restock item", screens["top"], 0)
+    while True:
+        current_menu = os.listdir(item_directory)
+        print_list()
+        choice = inps()
+        if not choice:
+            return
+        with open(item_directory + "/" + choice, "r") as file:
+            name = file.read()
+            name, desc, quantity, price = name.split("|")
+        try:
+            quantity = int(quantity)
+        except Exception:
+            print_text("Quantity is not a int and cannot be convered for adjustment. Please correct this in Inventory.", screens["main"], 1)
+            wait()
+            return
+        old_quantity = quantity
+        print_text("Enter how much of this item will be added", screens["main"], 1)
+        try:
+            quantity += int(type())
+        except Exception:
+            print_text("Entered value is not an int, no values will be changed", screens["main"], 1)
+            continue
+
+        quantity = str(quantity)
+
+        print_text(f"Stock as changed from {old_quantity} > {quantity}\nPress to cont.", screens["main"], 1)
+        wait()
+        with open(item_directory + "/" + choice, "w") as file:
+            file.write(f"{name}|{desc}|{quantity}|{price}")
+
+
 def wait():
     screens["main"].getch()
 
@@ -153,6 +290,7 @@ def print_list(listy=[]):
 
 def inps():
     global pos
+    pos = 0
     while True:
         key = screens["main"].getch()
         if key == ord("w") or key == ord("s"):
@@ -174,7 +312,7 @@ def inps():
 
 def select(key, pos):
     if not current_menu:
-        return
+        return 0
 
     if key == ord("s"):
         pos += 1
@@ -190,7 +328,8 @@ def select(key, pos):
         if pos < 0:
             pos = 0
             back = 0
-    screens["main"].addstr(pos + offset - back, 0, current_menu[pos - back])
+    if pos - back > -1 and pos - back < len(current_menu):
+        screens["main"].addstr(pos + offset - back, 0, current_menu[pos - back])
     screens["main"].addstr(pos + offset, 0, current_menu[pos], colors["highlight"])
 
     return pos
@@ -209,13 +348,13 @@ def run_setup():
         with open(history_file, "r") as file:
             pass
     
-menu_links = {"Manage Inventory": manage_inv, "View Stats": view_stats, "Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items}
+menu_links = {"Perform Transaction": transaction, "Manage Inventory": manage_inv, "View Stats": view_stats, "Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history}
 menus = []
 j = 0
 for i in menu_links.keys():
     menus.append(i)
     j += 1
-    if j == 2:
+    if j == 3:
         break
 current_menu = menus
 run_setup()
