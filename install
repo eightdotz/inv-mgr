@@ -1,4 +1,4 @@
 #!/bin/sh
-
+chmod +x ghostmgr
 sudo cp ghostmgr /usr/bin
 sudo cp ghostmgr /usr/local/bin
