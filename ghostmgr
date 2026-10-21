@@ -412,7 +412,7 @@ def update():
     with open("ghostmgr", "wb") as f:
         f.write(response.content)
     subprocess.run(["sudo", "install", "-m", "755", "ghostmgr", "/usr/local/bin/ghostmgr"], check=True) 
-    os.remove("ghostmgr"
+    os.remove("ghostmgr")
 
 def wait():
     screens["main"].getch()
