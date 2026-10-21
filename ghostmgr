@@ -1,12 +1,12 @@
 #!/bin/env python3
 import os
-import threading as task
 import time
 import curses
+import subprocess
 from curses import wrapper
 from curses.textpad import Textbox
-import sys
-import subprocess
+import requests
+update_url = "https://raw.githubusercontent.com/eightdotz/inv-mgr/refs/heads/main/ghostmgr"
 
 height = 0
 width = 0
@@ -176,6 +176,16 @@ def quick_delete(filename):
     print_text("Item removed!", screens["main"], 1)
     time.sleep(0.1)
     wait()
+
+def settings():
+    global current_menu
+    while True:
+        print_text("Inventory Manager", screens["top"], 0)
+        current_menu = ["Reset Selling History", "Self Update"]
+        print_list()
+        if not inps():
+            return
+
 
 def manage_inv():
     global current_menu
@@ -390,6 +400,19 @@ def update_item():
         with open(item_directory + "/" + choice, "w") as file:
             file.write(f"{name}|{desc}|{quantity}|{price}")
 
+def reset_history():
+    with open(history_file, "w") as file:
+        file.write("")
+    print_text("History reset!", screens["main"], 1)
+    wait()
+
+def update():
+    response = requests.get(update_url)
+    response.raise_for_status()
+    with open("ghostmgr", "wb") as f:
+        f.write(response.content)
+    subprocess.run(["sudo", "install", "-m", "755", "ghostmgr", "/usr/local/bin/ghostmgr"], check=True) 
+    os.remove("ghostmgr"
 
 def wait():
     screens["main"].getch()
@@ -495,13 +518,13 @@ def run_setup():
         with open(history_file, "r") as file:
             pass
     
-menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv, "View Stats": view_stats, "Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete}
+menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update}
 menus = []
 j = 0
 for i in menu_links.keys():
     menus.append(i)
     j += 1
-    if j == 4:
+    if j == 5:
         break
 current_menu = menus
 run_setup()
