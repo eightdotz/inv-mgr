@@ -78,7 +78,7 @@ def search():
             if not name:
                 break
             while True:
-                current_menu = ["Sell", "Restock", "Edit", "Delete"]
+                current_menu = ["View", "Sell", "Restock", "Edit", "Delete"]
                 print_list()
                 choice = quick_inps()
                 if not choice:
@@ -88,6 +88,16 @@ def search():
                     new_func(name)
                     print_list()
         
+
+def quick_view(filename):
+    global current_menu
+    print_text("View Current Items!", screens["top"], 0)
+    with open(item_directory + "/" + filename, "r") as file:
+        name = file.read()
+        name, desc, quantity, price = name.split("|")
+    print_text(f"{name}:\n{desc}\n\nIn Stock: {quantity}\nListed Price: ${price}\n\nEnter to cont.", screens["main"], 1)
+    wait()
+
 
 def quick_sell(filename):
     print_text("Sell item", screens["top"], 0)
@@ -519,7 +529,7 @@ def run_setup():
         with open(history_file, "r") as file:
             pass
     
-menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update}
+menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view}
 menus = []
 j = 0
 for i in menu_links.keys():
