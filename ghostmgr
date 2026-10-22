@@ -428,8 +428,10 @@ def update():
     os.remove("ghostmgr")
     print_text("Program updated!", screens["main"], 1)
     wait()
+    print_text("Update notes:", screens["top"], 1)
     print_text(update_notes, screens["main"], 1)
     wait()
+
 def wait():
     screens["main"].getch()
 
