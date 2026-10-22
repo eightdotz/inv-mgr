@@ -6,6 +6,9 @@ import subprocess
 from curses import wrapper
 from curses.textpad import Textbox
 import requests
+
+update_notes = "Added update notes! Hopefully these work."
+
 update_url = "https://raw.githubusercontent.com/eightdotz/inv-mgr/refs/heads/main/ghostmgr"
 
 height = 0
@@ -424,6 +427,8 @@ def update():
     subprocess.run(["sudo", "install", "-m", "755", "ghostmgr", "/usr/local/bin/ghostmgr"], check=True) 
     os.remove("ghostmgr")
     print_text("Program updated!", screens["main"], 1)
+    wait()
+    print_text(update_notes, screens["main"], 1)
     wait()
 def wait():
     screens["main"].getch()
