@@ -7,7 +7,7 @@ from curses import wrapper
 from curses.textpad import Textbox
 import requests
 
-update_notes = "Added update notes! Hopefully these work."
+update_notes = "Added part manager, search coming soon.\nAlso added multiline description"
 
 update_url = "https://raw.githubusercontent.com/eightdotz/inv-mgr/refs/heads/main/ghostmgr"
 
@@ -19,6 +19,8 @@ pos = 0
 user = os.path.expanduser("~")
 config = user+"/.ghostie"
 item_directory = config + "/items"
+parts_directory = config + "/parts"
+
 history_file = config + "/history.conf"
 
 
@@ -51,6 +53,16 @@ def main(stdscr):
         print_list()
         if not inps():
             exit()
+
+def manage_parts():
+    global current_menu
+    while True:
+        print_text("Parts Manager", screens["top"], 0)
+        current_menu = ["View Parts", "Add Parts", "Edit Parts", "Delete Parts"]
+        print_list()
+        if not inps():
+            return
+
 
 def search():
     global current_menu
@@ -250,10 +262,17 @@ def add_item():
     name = type()
     if not name or name == "q":
         return    
-    print_text("Enter the items description or characteristics:", screens["main"], 1)
-    description = type()
-    if description == "q":
-        return
+    msg = "(enter to continue) Enter the items description or characteristics:"
+    description = "\n"
+    while True:
+        print_text(msg + description, screens["main"], 1)
+        line = type()
+        description += line + "\n"
+        if line == "q":
+            return
+        elif not line:
+            break
+
     print_text("Enter the quantity:", screens["main"], 1)
     quantity = type()
     if quantity == "q":
@@ -341,6 +360,111 @@ def view_items():
             name, desc, quantity, price = name.split("|")
         print_text(f"{name}:\n{desc}\n\nIn Stock: {quantity}\nListed Price: ${price}\n\nEnter to cont.", screens["main"], 1)
         wait()
+
+def add_parts():
+    print_text("Add new part", screens["top"], 0)
+    print_text("(Enter q to quit) Enter the part number/mfn number:", screens["main"], 1)
+    name = type()
+    if not name or name == "q":
+        return
+    msg = "(enter to continue) Enter the part details, specs, etc:"
+    description = "\n"
+    while True:
+        print_text(msg + description, screens["main"], 1)
+        line = type()
+        description += line + "\n"
+        if line == "q":
+            return
+        elif not line:
+            break
+    print_text("Enter the quantity:", screens["main"], 1)
+    quantity = type()
+    if quantity == "q":
+        return
+    print_text("Enter the unit price:", screens["main"], 1)
+    price = type()
+    if price == "q":
+        return
+    if not description:
+        description = "NO DETAILS"
+    if not quantity:
+        quantity = "0"
+    if not price:
+        price = "0"
+    with open(parts_directory + f"/{name}", "w") as file:
+        file.write(f"{name}|{description}|{quantity}|{price}")
+
+def edit_parts():
+    global current_menu
+    print_text("Edit part", screens["top"], 0)
+    while True:
+        current_menu = os.listdir(parts_directory)
+        print_list()
+        choice = inps()
+        if not choice:
+            return
+        with open(parts_directory + "/" + choice, "r") as file:
+            name = file.read()
+            name, desc, quantity, price = name.split("|")
+        while True:
+            current_menu = [f"Part Number: {name}", f"Description: (select to view description)", f"Quantity held: {quantity}", f"Unit price: {price}"]
+            print_list()
+            update_choice = inps()
+            if not update_choice:
+                if choice in os.listdir(parts_directory):
+                    os.remove(parts_directory + "/" + choice)
+                elif name in os.listdir(parts_directory):
+                    os.remove(parts_directory + "/" + choice)
+                with open(parts_directory + "/" + name, "w") as file:
+                    file.write(f"{name}|{desc}|{quantity}|{price}")
+                break
+            if "Part Number:" in update_choice:
+                print_text(name, screens["main"], 1)
+                name = type(name)
+            elif "Description:" in update_choice:
+                print_text(desc, screens["main"], 1)
+                desc = type(desc)
+            elif "Quantity held:" in update_choice:
+                print_text(quantity, screens["main"], 1)
+                quantity = type(quantity)
+            elif "Unit price:" in update_choice:
+                print_text(price, screens["main"], 1)
+                price = type(price)
+
+def delete_parts():
+    global current_menu
+    print_text("Delete a part", screens["top"], 0)
+    while True:
+        current_menu = os.listdir(parts_directory)
+        print_list()
+        choice = inps()
+        if not choice:
+            return
+        print_text("Type 'yes' to confirm deletion.", screens["main"], 1)
+        conf = type().lower()
+        if conf == "yes":
+            os.remove(parts_directory + "/" + choice)
+        else:
+            continue
+        print_text("Part removed!", screens["main"], 1)
+        time.sleep(0.1)
+        wait()
+
+def view_parts():
+    global current_menu
+    print_text("View Parts!", screens["top"], 0)
+    while True:
+        current_menu = os.listdir(parts_directory)
+        print_list()
+        choice = inps()
+        if not choice:
+            return
+        with open(parts_directory + "/" + choice, "r") as file:
+            name = file.read()
+            name, desc, quantity, price = name.split("|")
+        print_text(f"Part Number: {name}\nDetails:\n{desc}\n\nIn Stock: {quantity}\nPrice: ${price}\n\nEnter to cont.", screens["main"], 1)
+        wait()
+
 
 def transaction():
     global current_menu
@@ -528,6 +652,9 @@ def run_setup():
     
     if "items" not in os.listdir(config):
         os.mkdir(item_directory)
+    
+    if "parts" not in os.listdir(config):
+        os.mkdir(parts_directory)
 
     if "history.conf" not in os.listdir(config):
         with open(history_file, "w") as file:
@@ -536,13 +663,13 @@ def run_setup():
         with open(history_file, "r") as file:
             pass
     
-menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view}
+menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv,"Manage Parts": manage_parts, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view, "View Parts": view_parts, "Edit Parts": edit_parts, "Add Parts": add_parts, "Delete Parts": delete_parts}
 menus = []
 j = 0
 for i in menu_links.keys():
     menus.append(i)
     j += 1
-    if j == 5:
+    if j == 6:
         break
 current_menu = menus
 run_setup()
