@@ -7,7 +7,7 @@ from curses import wrapper
 from curses.textpad import Textbox
 import requests
 
-update_notes = "Added part manager, search coming soon.\nAlso added multiline description"
+update_notes = "Added part manager, search, stock clarification, and recipes"
 
 update_url = "https://raw.githubusercontent.com/eightdotz/inv-mgr/refs/heads/main/ghostmgr"
 
@@ -20,7 +20,7 @@ user = os.path.expanduser("~")
 config = user+"/.ghostie"
 item_directory = config + "/items"
 parts_directory = config + "/parts"
-
+recipe_directory = config + "/recipe"
 history_file = config + "/history.conf"
 
 
@@ -53,6 +53,16 @@ def main(stdscr):
         print_list()
         if not inps():
             exit()
+
+def check_stock(listy):
+    i = 0
+    for filename in listy:
+        with open(item_directory + "/" + filename, "r") as file:
+            name = file.read()
+            name, desc, quantity, price = name.split("|")
+        if int(quantity) < 1:
+            listy[i] = "!" + filename
+    return listy
 
 def manage_parts():
     global current_menu
@@ -88,10 +98,13 @@ def search():
                 print_text("No results!", screens["main"], 1)
                 wait()
                 break
+            current_menu = check_stock(current_menu)
             print_list()
             name = inps()
             if not name:
                 break
+            if name[0] == "!":
+                name = name[1:]
             while True:
                 current_menu = ["View", "Sell", "Restock", "Edit", "Delete"]
                 print_list()
@@ -295,10 +308,14 @@ def edit_item():
     print_text("Edit item", screens["top"], 0)
     while True:
         current_menu = os.listdir(item_directory)
+        if current_menu:
+            current_menu = check_stock(current_menu)
         print_list()
         choice = inps()
         if not choice:
             return
+        if choice[0] == "!":
+            choice = choice [1:]
         with open(item_directory + "/" + choice, "r") as file:
             name = file.read()
             name, desc, quantity, price = name.split("|")
@@ -332,10 +349,14 @@ def delete_item():
     print_text("Delete an item.", screens["top"], 0)
     while True:
         current_menu = os.listdir(item_directory)
+        if current_menu:
+            current_menu = check_stock(current_menu)
         print_list()
         choice = inps()
         if not choice:
             return
+        if choice[0] == "!":
+            choice = choice [1:]
         print_text("Type 'yes' to confirm deletion.", screens["main"], 1)
         conf = type().lower()
         if conf == "yes":
@@ -351,10 +372,14 @@ def view_items():
     print_text("View Current Items!", screens["top"], 0)
     while True:
         current_menu = os.listdir(item_directory)
+        if current_menu:
+            current_menu = check_stock(current_menu)
         print_list()
         choice = inps()
         if not choice:
             return
+        if choice[0] == "!":
+            choice = choice [1:]
         with open(item_directory + "/" + choice, "r") as file:
             name = file.read()
             name, desc, quantity, price = name.split("|")
@@ -480,10 +505,14 @@ def sell_item():
     print_text("Sell item", screens["top"], 0)
     while True:
         current_menu = os.listdir(item_directory)
+        if current_menu:
+            current_menu = check_stock(current_menu)
         print_list()
         choice = inps()
         if not choice:
             return
+        if choice[0] == "!":
+            choice = choice [1:]
         with open(item_directory + "/" + choice, "r") as file:
             name = file.read()
             name, desc, quantity, price = name.split("|")
@@ -509,10 +538,14 @@ def update_item():
     print_text("Restock item", screens["top"], 0)
     while True:
         current_menu = os.listdir(item_directory)
+        if current_menu:
+            current_menu = check_stock(current_menu)
         print_list()
         choice = inps()
         if not choice:
             return
+        if choice[0] == "!":
+            choice = choice [1:]
         with open(item_directory + "/" + choice, "r") as file:
             name = file.read()
             name, desc, quantity, price = name.split("|")
@@ -656,6 +689,8 @@ def run_setup():
     if "parts" not in os.listdir(config):
         os.mkdir(parts_directory)
 
+    if "recipe" not in os.listdir(config):
+        os.mkdir(recipe_directory)
     if "history.conf" not in os.listdir(config):
         with open(history_file, "w") as file:
             pass
@@ -663,7 +698,114 @@ def run_setup():
         with open(history_file, "r") as file:
             pass
     
-menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv,"Manage Parts": manage_parts, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view, "View Parts": view_parts, "Edit Parts": edit_parts, "Add Parts": add_parts, "Delete Parts": delete_parts}
+def recipe():
+    global current_menu
+    while True:
+        print_text("Parts Manager", screens["top"], 0)
+        current_menu = ["View Recipe", "Add Recipe", "Edit Recipe", "Delete Recipe"]
+        print_list()
+        if not inps():
+            return
+
+
+def add_recipe():
+    global current_menu
+    print_text("Add a new recipe!", screens["top"], 0)
+    current_menu = os.listdir(item_directory)
+    print_list()
+    name = inps()
+    if not name:
+        return
+    parts = {}
+    while True:
+        print_text("Select parts", screens["top"], 0)
+        current_menu = os.listdir(parts_directory)
+        current_menu.insert(0, "#Continue")
+        print_list()
+        choice = inps()
+        if choice == "#Continue":
+            break
+        elif choice:
+            print_text("Enter quanity used", screens["top"], 0)
+            quantity = type()
+            parts.update({choice: quantity})
+        else:
+            return
+    with open(recipe_directory + f"/{name}", "w") as file:
+        file.write(f"{name}:\n")
+        for part, num in parts.items():
+            file.write(f"{part}|{num}\n")
+            file.write("END")
+    print_text("Recipe saved!", screens["main"], 1)
+    wait()
+    
+def edit_recipe():
+    global current_menu
+    print_text("Edit recipe", screens["top"], 0)
+    while True:
+        current_menu = os.listdir(recipe_directory)
+        print_list()
+        choice = inps()
+        if not choice:
+            return
+        if choice not in os.listdir(recipe_directory):
+            print_text("No recipe found!", screens["main"], 0)
+            wait()
+            continue
+        parts = []
+        with open(recipe_directory + "/" + choice, "r") as file:
+            data = file.readlines()
+            name = data[0].strip(":")
+            for item in data:
+                if "|" in item:
+                    parts.append(item)
+        while True:
+            current_menu = parts
+            print_list()
+            update_choice = inps()
+            if not update_choice:
+                return
+            new_part = type(update_choice)
+            parts[pos] = new_part
+            with open(recipe_directory + "/" + choice, "w") as file:
+                file.write(choice+":\n")
+                for item in parts:
+                    file.write(item+"\n") 
+
+def delete_recipe():
+    global current_menu
+    print_text("Delete an recipe", screens["top"], 0)
+    while True:
+        current_menu = os.listdir(recipe_directory)
+        print_list()
+        choice = inps()
+        if not choice:
+            return
+        print_text("Type 'yes' to confirm deletion.", screens["main"], 1)
+        conf = type().lower()
+        if conf == "yes":
+            os.remove(recipe_directory + "/" + choice)
+        else:
+            continue
+        print_text("Item removed!", screens["main"], 1)
+        time.sleep(0.1)
+        wait()
+
+def view_recipe():
+    global current_menu
+    print_text("View current recipes", screens["top"], 0)
+    while True:
+        current_menu = os.listdir(recipe_directory)
+        print_list()
+        choice = inps()
+        if not choice:
+            return
+        with open(recipe_directory + "/" + choice, "r") as file:
+            data = file.read()
+        print_text(data, screens["main"], 1)
+        wait()
+
+menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv,"Manage Parts": manage_parts, "Recipes": recipe, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view, "View Parts": view_parts, "Edit Parts": edit_parts, "Add Parts": add_parts, "Delete Parts": delete_parts, "Add Recipe": add_recipe, "Edit Recipe": edit_recipe, "Delete Recipe": delete_recipe, "View Recipe": view_recipe}
 menus = []
 j = 0
 for i in menu_links.keys():
