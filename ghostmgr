@@ -7,7 +7,9 @@ from curses import wrapper
 from curses.textpad import Textbox
 import requests
 
-update_notes = "0.3 (parts and recipes): Added part manager, search, stock clarification, and recipes\n0.3.1 Fixed bugs, added measurements, display issue\n0.3.2 added recipe price calculations, fixed saving recipe bug and prices as int instead of float"
+current_version = "0.3.4-Parts and Recipes"
+
+update_notes = "0.3 (parts and recipes): Added part manager, search, stock clarification, and recipes\n0.3.1 Fixed bugs, added measurements, display issue\n0.3.2 added recipe price calculations, fixed saving recipe bug and prices as int instead of float\n0.3.3 added update confirmation to prevent accidental overwrites and seperate entry for changelog viewing"
 
 update_url = "https://raw.githubusercontent.com/eightdotz/inv-mgr/refs/heads/main/ghostmgr"
 
@@ -219,7 +221,7 @@ def settings():
     global current_menu
     while True:
         print_text("Inventory Manager", screens["top"], 0)
-        current_menu = ["Reset Selling History", "Self Update"]
+        current_menu = ["Reset Selling History", "View Changelog", "Self Update"]
         print_list()
         if not inps():
             return
@@ -628,6 +630,10 @@ def reset_history():
     wait()
 
 def update():
+    print_text("Continue UPDATING PROGRAM? type 'yes' to confirm", screens["main"], 1)
+    confirm = type("no")
+    if confirm != "yes":
+        return
     response = requests.get(update_url)
     response.raise_for_status()
     with open("ghostmgr", "wb") as f:
@@ -637,7 +643,9 @@ def update():
     print_text("Program updated!", screens["main"], 1)
     wait()
     print_text("Update notes:", screens["top"], 1)
-    print_text(update_notes, screens["main"], 1)
+
+def changelog():
+    print_text(f"VERISON={current_version}\n\n{update_notes}", screens["main"], 1)
     wait()
 
 def wait():
@@ -879,7 +887,7 @@ def view_recipe():
             print_text(f"Recipe: {data[0].strip(":")}\n{sorted_data}\n\nTotal cost: ${total}", screens["main"], 1)
         wait()
 
-menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv,"Manage Parts": manage_parts, "Manage Recipes": recipe, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view, "View Parts": view_parts, "Edit Parts": edit_parts, "Add Parts": add_parts, "Delete Parts": delete_parts, "Add Recipe": add_recipe, "Edit Recipe": edit_recipe, "Delete Recipe": delete_recipe, "View Recipe": view_recipe}
+menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv,"Manage Parts": manage_parts, "Manage Recipes": recipe, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view, "View Parts": view_parts, "Edit Parts": edit_parts, "Add Parts": add_parts, "Delete Parts": delete_parts, "Add Recipe": add_recipe, "Edit Recipe": edit_recipe, "Delete Recipe": delete_recipe, "View Recipe": view_recipe, "View Changelog": changelog}
 menus = []
 j = 0
 for i in menu_links.keys():
