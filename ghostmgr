@@ -7,7 +7,7 @@ from curses import wrapper
 from curses.textpad import Textbox
 import requests
 
-update_notes = "Added part manager, search, stock clarification, and recipes\nFixed bugs, added OZ, display issue"
+update_notes = "0.3 (parts and recipes): Added part manager, search, stock clarification, and recipes\n0.3.1 Fixed bugs, added measurements, display issue\n0.3.2 added recipe price calculations, fixed saving recipe bug and prices as int instead of float"
 
 update_url = "https://raw.githubusercontent.com/eightdotz/inv-mgr/refs/heads/main/ghostmgr"
 
@@ -258,9 +258,9 @@ def selling_history():
         name = name.strip()
         price = price.strip()
         if name not in item_data.keys():
-            item_data[name] = {"price": int(price), "sold": 1}
+            item_data[name] = {"price": float(price), "sold": 1}
         else:
-            item_data[name]["price"] += int(price)
+            item_data[name]["price"] += float(price)
             item_data[name]["sold"] += 1
     for name, price in item_data.items():
         formatted_items.append(f"Sold {item_data[name]["sold"]} {name} = ${item_data[name]["price"]}")
@@ -514,7 +514,7 @@ def view_parts():
         with open(parts_directory + "/" + choice, "r") as file:
             name = file.read()
             name, desc, quantity, unit, price = name.split("|")
-        total = int(price.strip("$")) * int(quantity.strip())
+        total = float(price.strip("$")) * float(quantity.strip())
         print_text(f"Part Number: {name}\nDetails:\n{desc}\n\nIn Stock: {quantity} {unit}\nPrice: ${price} per {unit}\nTotal stock cost: ${total}\n\nEnter to cont.", screens["main"], 1)
         wait()
 
@@ -597,6 +597,29 @@ def update_item():
         wait()
         with open(item_directory + "/" + choice, "w") as file:
             file.write(f"{name}|{desc}|{quantity}|{price}")
+
+def save_item(choice, name, desc, quantity, price):
+    with open(item_directory + "/" + choice, "w") as file:
+        file.write(f"{name}|{desc}|{quantity}|{price}")
+
+
+def load_item(choice):        
+    with open(item_directory + "/" + choice, "r") as file:
+        name = file.read()
+        name, desc, quantity, price = name.split("|")
+        return name, desc, quantity, price
+
+
+def save_part(choice, name, desc, quantity, unit, price):
+    with open(parts_directory + "/" + choice, "w") as file:
+        file.write(f"{name}|{desc}|{quantity}|{unit}|{price}")
+
+
+def load_part(choice):        
+    with open(parts_directory + "/" + choice, "r") as file:
+        name = file.read()
+        name, desc, quantity, unit, price = name.split("|")
+        return name, desc, quantity, unit, price
 
 def reset_history():
     with open(history_file, "w") as file:
@@ -763,7 +786,7 @@ def add_recipe():
         file.write(f"{name}:\n")
         for part, num in parts.items():
             file.write(f"{part}|{num}\n")
-            file.write("END")
+        file.write("END")
     print_text("Recipe saved!", screens["main"], 1)
     wait()
     
@@ -805,7 +828,8 @@ def edit_recipe():
             with open(recipe_directory + "/" + choice, "w") as file:
                 file.write(choice+":\n")
                 for key, val in parts.items():
-                    file.write(f"{key}|{val}\n") 
+                    file.write(f"{key}|{val}\n")
+                file.write("END") 
 
 def delete_recipe():
     global current_menu
@@ -837,21 +861,31 @@ def view_recipe():
             return
         with open(recipe_directory + "/" + choice, "r") as file:
             sorted_data = ""
+            all_prices = []
             data = file.readlines()
             for item in data:
                 if "|" in item:
                     name, val = item.split("|")
-                    sorted_data += f"{name}: {val}\n"
-            print_text(f"Recipe: {data[0].strip(":")}\n{sorted_data}", screens["main"], 1)
+                    if name in os.listdir(parts_directory):
+                        name, desc, quantity, unit, price = load_part(name)
+                        sorted_data += f"{name}: {val.strip()} {unit} @ ${float(val.strip()) * float(price.strip("$"))}\n"
+                        all_prices.append(float(price.strip("$")))
+                    else:
+                        sorted_data += f"{name}: {val.strip()} (part data not found)\n"
+                total = 0
+                if all_prices:
+                    for item in all_prices:
+                        total += item
+            print_text(f"Recipe: {data[0].strip(":")}\n{sorted_data}\n\nTotal cost: ${total}", screens["main"], 1)
         wait()
 
-menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv,"Manage Parts": manage_parts, "Recipes": recipe, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view, "View Parts": view_parts, "Edit Parts": edit_parts, "Add Parts": add_parts, "Delete Parts": delete_parts, "Add Recipe": add_recipe, "Edit Recipe": edit_recipe, "Delete Recipe": delete_recipe, "View Recipe": view_recipe}
+menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv,"Manage Parts": manage_parts, "Manage Recipes": recipe, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view, "View Parts": view_parts, "Edit Parts": edit_parts, "Add Parts": add_parts, "Delete Parts": delete_parts, "Add Recipe": add_recipe, "Edit Recipe": edit_recipe, "Delete Recipe": delete_recipe, "View Recipe": view_recipe}
 menus = []
 j = 0
 for i in menu_links.keys():
     menus.append(i)
     j += 1
-    if j == 6:
+    if j == 7:
         break
 current_menu = menus
 run_setup()
