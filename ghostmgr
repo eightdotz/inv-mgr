@@ -388,11 +388,11 @@ def view_items():
 
 def add_parts():
     print_text("Add new part", screens["top"], 0)
-    print_text("(Enter q to quit) Enter the part number/mfn number:", screens["main"], 1)
+    print_text("(Enter q to quit) Enter the name/mfn number:", screens["main"], 1)
     name = type()
     if not name or name == "q":
         return
-    msg = "(enter to continue) Enter the part details, specs, etc:"
+    msg = "(enter to continue) Enter the part details/description:"
     description = "\n"
     while True:
         print_text(msg + description, screens["main"], 1)
@@ -402,11 +402,17 @@ def add_parts():
             return
         elif not line:
             break
-    print_text("Enter the quantity:", screens["main"], 1)
+    print_text("Enter the measurement per unit (grams, ounces, meters):", screens["main"], 1)
+    unit = type()
+    if unit == "q":
+        return
+    elif not unit:
+        unit = ""
+    print_text("Enter the quantity per unit (Example: 500 is 500 grams):", screens["main"], 1)
     quantity = type()
     if quantity == "q":
         return
-    print_text("Enter the unit price:", screens["main"], 1)
+    print_text("Enter the unit price (per 1 quantity):", screens["main"], 1)
     price = type()
     if price == "q":
         return
@@ -417,7 +423,7 @@ def add_parts():
     if not price:
         price = "0"
     with open(parts_directory + f"/{name}", "w") as file:
-        file.write(f"{name}|{description}|{quantity}|{price}")
+        file.write(f"{name}|{description}|{quantity}|{unit}|{price}")
 
 def edit_parts():
     global current_menu
@@ -430,9 +436,9 @@ def edit_parts():
             return
         with open(parts_directory + "/" + choice, "r") as file:
             name = file.read()
-            name, desc, quantity, price = name.split("|")
+            name, desc, quantity, unit, price = name.split("|")
         while True:
-            current_menu = [f"Part Number: {name}", f"Description: (select to view description)", f"Quantity held: {quantity}", f"Unit price: {price}"]
+            current_menu = [f"Part Number: {name}", f"Description: (select to view description, will overwrite)", "Unit of measurement: {unit}", f"Quantity held: {quantity}", f"Unit price: {price}"]
             print_list()
             update_choice = inps()
             if not update_choice:
@@ -441,20 +447,41 @@ def edit_parts():
                 elif name in os.listdir(parts_directory):
                     os.remove(parts_directory + "/" + choice)
                 with open(parts_directory + "/" + name, "w") as file:
-                    file.write(f"{name}|{desc}|{quantity}|{price}")
+                    file.write(f"{name}|{desc}|{quantity}|{unit}|{price}")
                 break
             if "Part Number:" in update_choice:
                 print_text(name, screens["main"], 1)
                 name = type(name)
             elif "Description:" in update_choice:
-                print_text(desc, screens["main"], 1)
-                desc = type(desc)
+                i = 1
+                new_desc = ""
+                print_text("WARNING: WILL OVERWRITE, ENTER NOTHING TO EXIT\n" + desc, screens["main"], 0)
+                while True:
+                    temp = type()
+                    if not temp:
+                        break
+                    new_desc += temp + "\n"
+                    #for j in range(0, width - 1)
+                        #screens["main"].addstr(i, j, " ")
+
+                    print_text("WARNING: WILL OVERWRITE, ENTER NOTHING TO EXIT\n" + new_desc, screens["main"], 0)
+                if new_desc:
+                    desc = new_desc
             elif "Quantity held:" in update_choice:
                 print_text(quantity, screens["main"], 1)
                 quantity = type(quantity)
             elif "Unit price:" in update_choice:
                 print_text(price, screens["main"], 1)
                 price = type(price)
+            elif "Unit of measurement:" in update_choice:
+                print_text(unit, screens["main"], 1)
+                unit = type(unit)
+            if choice in os.listdir(parts_directory):
+                os.remove(parts_directory + "/" + choice)
+            elif name in os.listdir(parts_directory):
+                os.remove(parts_directory + "/" + choice)
+            with open(parts_directory + "/" + name, "w") as file:
+                file.write(f"{name}|{desc}|{quantity}|{unit}|{price}")
 
 def delete_parts():
     global current_menu
@@ -486,8 +513,9 @@ def view_parts():
             return
         with open(parts_directory + "/" + choice, "r") as file:
             name = file.read()
-            name, desc, quantity, price = name.split("|")
-        print_text(f"Part Number: {name}\nDetails:\n{desc}\n\nIn Stock: {quantity}\nPrice: ${price}\n\nEnter to cont.", screens["main"], 1)
+            name, desc, quantity, unit, price = name.split("|")
+        total = int(price.strip("$")) * int(quantity.strip())
+        print_text(f"Part Number: {name}\nDetails:\n{desc}\n\nIn Stock: {quantity} {unit}\nPrice: ${price} per {unit}\nTotal stock cost: ${total}\n\nEnter to cont.", screens["main"], 1)
         wait()
 
 
@@ -752,25 +780,32 @@ def edit_recipe():
             print_text("No recipe found!", screens["main"], 0)
             wait()
             continue
-        parts = []
-        with open(recipe_directory + "/" + choice, "r") as file:
-            data = file.readlines()
-            name = data[0].strip(":")
-            for item in data:
-                if "|" in item:
-                    parts.append(item)
         while True:
-            current_menu = parts
+            parts = {}
+            parts_display = []
+            with open(recipe_directory + "/" + choice, "r") as file:
+                data = file.readlines()
+                name = data[0].strip(":")
+                for item in data:
+                    if "|" in item:
+                        key, val = item.split("|")
+                        parts.update({key: val})
+                        parts_display.append(f"{key}: {val}")
+            current_menu = parts_display
             print_list()
             update_choice = inps()
             if not update_choice:
                 return
-            new_part = type(update_choice)
-            parts[pos] = new_part
+            key, val = update_choice.split(":")
+            val = val.strip()
+            new_part = type(val)
+            if not new_part:
+                new_part = val
+            parts[key.strip()] = new_part.strip()
             with open(recipe_directory + "/" + choice, "w") as file:
                 file.write(choice+":\n")
-                for item in parts:
-                    file.write(item+"\n") 
+                for key, val in parts.items():
+                    file.write(f"{key}|{val}\n") 
 
 def delete_recipe():
     global current_menu
@@ -801,8 +836,13 @@ def view_recipe():
         if not choice:
             return
         with open(recipe_directory + "/" + choice, "r") as file:
-            data = file.read()
-        print_text(data, screens["main"], 1)
+            sorted_data = ""
+            data = file.readlines()
+            for item in data:
+                if "|" in item:
+                    name, val = item.split("|")
+                    sorted_data += f"{name}: {val}\n"
+            print_text(f"Recipe: {data[0].strip(":")}\n{sorted_data}", screens["main"], 1)
         wait()
 
 menu_links = {"Search": search, "Perform Transaction": transaction, "Manage Inventory": manage_inv,"Manage Parts": manage_parts, "Recipes": recipe, "View Stats": view_stats, "Settings": settings,"Add New Item": add_item, "Edit Current Item": edit_item, "Delete Item": delete_item, "View Items": view_items, "Sell Item": sell_item, "Restock Quantity": update_item, "View Selling History": selling_history, "Sell": quick_sell, "Restock": quick_stock, "Edit": quick_edit, "Delete": quick_delete,"Reset Selling History": reset_history, "Self Update": update, "View": quick_view, "View Parts": view_parts, "Edit Parts": edit_parts, "Add Parts": add_parts, "Delete Parts": delete_parts, "Add Recipe": add_recipe, "Edit Recipe": edit_recipe, "Delete Recipe": delete_recipe, "View Recipe": view_recipe}
