@@ -9,7 +9,7 @@ import requests
 
 current_version = "0.3.4-Parts and Recipes"
 
-update_notes = "0.3 (parts and recipes): Added part manager, search, stock clarification, and recipes\n0.3.1 Fixed bugs, added measurements, display issue\n0.3.2 added recipe price calculations, fixed saving recipe bug and prices as int instead of float\n0.3.3 added update confirmation to prevent accidental overwrites and seperate entry for changelog viewing"
+update_notes = "0.3 (parts and recipes): Added part manager, search, stock clarification, and recipes\n0.3.1 Fixed bugs, added measurements, display issue\n0.3.2 added recipe price calculations, fixed saving recipe bug and prices as int instead of float\n0.3.3 added update confirmation to prevent accidental overwrites and seperate entry for changelog viewing\n0.3.4 fixed selling history crash, fixed part add phrasing, changed quanity to floats, fixed empty quanity"
 
 update_url = "https://raw.githubusercontent.com/eightdotz/inv-mgr/refs/heads/main/ghostmgr"
 
@@ -62,8 +62,9 @@ def check_stock(listy):
         with open(item_directory + "/" + filename, "r") as file:
             name = file.read()
             name, desc, quantity, price = name.split("|")
-        if int(quantity) < 1:
+        if float(quantity) < 1:
             listy[i] = "!" + filename
+        i += 1
     return listy
 
 def manage_parts():
@@ -135,7 +136,7 @@ def quick_sell(filename):
         name = file.read()
         name, desc, quantity, price = name.split("|")
     try:
-        quantity = int(quantity)
+        quantity = float(quantity)
     except Exception:
         print_text("Quantity is not a float or int and cannot be convered for adjustment. Please correct this in Inventory.", screens["main"], 1)
         wait()
@@ -154,7 +155,7 @@ def quick_stock(filename):
         name = file.read()
         name, desc, quantity, price = name.split("|")
     try:
-        quantity = int(quantity)
+        quantity = float(quantity)
     except Exception:
         print_text("Quantity is not a int and cannot be convered for adjustment. Please correct this in Inventory.", screens["main"], 1)
         wait()
@@ -162,7 +163,7 @@ def quick_stock(filename):
     old_quantity = quantity
     print_text("Enter how much of this item will be added", screens["main"], 1)
     try:
-        quantity += int(type())
+        quantity += float(type())
     except Exception:
         print_text("Entered value is not an int, no values will be changed", screens["main"], 1)
         return
@@ -256,6 +257,8 @@ def selling_history():
             return
 
     for item in data:
+        if ":" not in item:
+            continue
         name, price = item.split(":")
         name = name.strip()
         price = price.strip()
@@ -410,7 +413,7 @@ def add_parts():
         return
     elif not unit:
         unit = ""
-    print_text("Enter the quantity per unit (Example: 500 is 500 grams):", screens["main"], 1)
+    print_text("Enter the quantity of units (Example: 500 is 500 grams):", screens["main"], 1)
     quantity = type()
     if quantity == "q":
         return
@@ -547,7 +550,7 @@ def sell_item():
             name = file.read()
             name, desc, quantity, price = name.split("|")
         try:
-            quantity = int(quantity)
+            quantity = float(quantity)
         except Exception:
             print_text("Quantity is not a float or int and cannot be convered for adjustment. Please correct this in Inventory.", screens["main"], 1)
             wait()
@@ -580,7 +583,7 @@ def update_item():
             name = file.read()
             name, desc, quantity, price = name.split("|")
         try:
-            quantity = int(quantity)
+            quantity = float(quantity)
         except Exception:
             print_text("Quantity is not a int and cannot be convered for adjustment. Please correct this in Inventory.", screens["main"], 1)
             wait()
@@ -588,7 +591,7 @@ def update_item():
         old_quantity = quantity
         print_text("Enter how much of this item will be added", screens["main"], 1)
         try:
-            quantity += int(type())
+            quantity += float(type())
         except Exception:
             print_text("Entered value is not an int, no values will be changed", screens["main"], 1)
             continue
